@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Repertoire</title>
+<meta name="theme-color" content="#5b5ff0">
+<meta name="description" content="Repertoire — browse, favorite, and build workouts from a personal exercise GIF library.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="brandBg" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#6f73fb"/>
+              <stop offset="1" stop-color="#4448d6"/>
+            </linearGradient>
+          </defs>
+          <rect width="100" height="100" rx="22" fill="url(#brandBg)"/>
+          <path d="M36,76 L36,26 C36,20 60,20 60,38 C60,54 42,53 37,50 L66,76"
+                fill="none" stroke="#ffffff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="24" y="20.5" width="24" height="11" rx="5.5" fill="#ffffff"/>
+          <rect x="24" y="70.5" width="24" height="11" rx="5.5" fill="#ffffff"/>
+        </svg>
+        <span class="brand-name">Repertoire</span>
+      </div>
+
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/>
+          <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <input id="searchInput" type="text" placeholder="Search exercises, muscles, equipment…" autocomplete="off">
+        <button id="clearSearch" class="clear-search-btn" title="Clear search" aria-label="Clear search">&times;</button>
+      </div>
+
+      <button id="filterToggleBtn" class="filter-toggle-btn" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 6H20M7 12H17M10 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Filters
+        <span id="activeFilterCount" class="active-filter-count hidden">0</span>
+      </button>
+
+      <button id="favToggleBtn" class="filter-toggle-btn" title="Show favorites only" aria-pressed="false">
+        <svg id="favIconOutline" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3.5l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        <svg id="favIconFilled" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" class="hidden"><path d="M12 3.5l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9L12 3.5z"/></svg>
+        <span id="favCount" class="active-filter-count hidden">0</span>
+      </button>
+
+      <button id="workoutToggleBtn" class="filter-toggle-btn" title="View workout">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 4v16M18 4v16M3 9h3M18 9h3M3 15h3M18 15h3M8 4h8v16H8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="workoutCount" class="active-filter-count hidden">0</span>
+      </button>
+
+      <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle theme" aria-label="Toggle theme">
+        <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="2"/><path d="M12 2V4M12 20V22M4 12H2M22 12H20M19.07 4.93L17.66 6.34M6.34 17.66L4.93 19.07M19.07 19.07L17.66 17.66M6.34 6.34L4.93 4.93" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="hidden"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <nav class="category-bar" id="categoryBar" aria-label="Body part categories"></nav>
+  </header>
+
+  <div id="filterPanel" class="filter-panel">
+    <div class="filter-panel-inner">
+      <div class="filter-group">
+        <label for="equipmentSelect">Equipment</label>
+        <select id="equipmentSelect"><option value="">Any equipment</option></select>
+      </div>
+      <div class="filter-group">
+        <label for="targetSelect">Target muscle</label>
+        <select id="targetSelect"><option value="">Any muscle</option></select>
+      </div>
+      <div class="filter-group sort-group">
+        <label for="sortSelect">Sort by</label>
+        <select id="sortSelect">
+          <option value="name">Name (A–Z)</option>
+          <option value="bodyPart">Body part</option>
+          <option value="target">Target muscle</option>
+          <option value="equipment">Equipment</option>
+        </select>
+      </div>
+      <button id="resetFiltersBtn" class="reset-filters-btn">Reset all</button>
+    </div>
+  </div>
+
+  <main class="main">
+    <div class="result-bar">
+      <span id="resultCount">Loading exercises…</span>
+      <div id="activeChips" class="active-chips"></div>
+    </div>
+
+    <div id="grid" class="grid" aria-live="polite"></div>
+
+    <div id="emptyState" class="empty-state hidden">
+      <div class="empty-emoji">🔍</div>
+      <p>No exercises match your filters.</p>
+      <button id="emptyResetBtn" class="reset-filters-btn">Clear filters</button>
+    </div>
+
+    <div id="sentinel" class="sentinel"></div>
+  </main>
+
+  <button id="backToTop" class="back-to-top" aria-label="Back to top">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 19V5M5 12L12 5L19 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+
+  <div id="modalOverlay" class="modal-overlay hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button id="modalClose" class="modal-close" aria-label="Close">&times;</button>
+      <button id="modalPrev" class="modal-nav modal-prev" aria-label="Previous exercise">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button id="modalNext" class="modal-nav modal-next" aria-label="Next exercise">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 6L15 12L9 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+
+      <div class="modal-body">
+        <div class="modal-media">
+          <img id="modalImg" src="" alt="">
+        </div>
+        <div class="modal-info">
+          <div class="modal-position" id="modalPosition"></div>
+          <h2 id="modalTitle"></h2>
+          <div class="modal-badges" id="modalBadges"></div>
+          <div class="modal-actions">
+            <button id="modalFavBtn" class="action-btn fav-action">
+              <span class="action-btn-icon">☆</span><span>Favorite</span>
+            </button>
+            <button id="modalAddBtn" class="action-btn add-action">
+              <span class="action-btn-icon">+</span><span>Add to workout</span>
+            </button>
+          </div>
+          <h3 class="modal-subheading">Secondary muscles</h3>
+          <div class="modal-badges" id="modalSecondary"></div>
+          <h3 class="modal-subheading">Instructions</h3>
+          <ol id="modalInstructions" class="modal-instructions"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="workoutDrawerOverlay" class="drawer-overlay hidden">
+    <aside class="workout-drawer" role="dialog" aria-modal="true" aria-labelledby="workoutDrawerTitle">
+      <div class="drawer-header">
+        <h2 id="workoutDrawerTitle">Your Workout</h2>
+        <button id="workoutDrawerClose" class="modal-close" aria-label="Close">&times;</button>
+      </div>
+
+      <div class="drawer-body">
+        <div id="workoutEmptyState" class="workout-empty hidden">
+          <div class="empty-emoji">🏋️</div>
+          <p>No exercises added yet.<br>Tap the <strong>+</strong> button on any exercise to build a workout.</p>
+        </div>
+
+        <ol id="workoutList" class="workout-list"></ol>
+
+        <div class="drawer-section">
+          <div class="drawer-section-title">Saved workouts</div>
+          <div id="savedWorkoutsList" class="saved-workouts-list"></div>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <div class="drawer-save-row">
+          <input id="workoutNameInput" type="text" placeholder="Name this workout…" autocomplete="off">
+          <button id="workoutSaveBtn" class="reset-filters-btn">Save</button>
+        </div>
+        <div class="drawer-footer-actions">
+          <button id="workoutClearBtn" class="reset-filters-btn">Clear all</button>
+          <button id="workoutStartBtn" class="start-workout-btn">Start Workout</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="workoutModeOverlay" class="workout-mode-overlay hidden">
+    <div class="workout-mode">
+      <div class="wm-header">
+        <div class="wm-progress-track"><div id="wmProgressFill" class="wm-progress-fill"></div></div>
+        <div class="wm-header-row">
+          <span id="wmPosition" class="wm-position"></span>
+          <button id="wmExitBtn" class="modal-close" aria-label="Exit workout">&times;</button>
+        </div>
+      </div>
+
+      <div class="wm-body">
+        <div class="wm-media">
+          <img id="wmImg" src="" alt="">
+        </div>
+        <div class="wm-info">
+          <h2 id="wmTitle"></h2>
+          <div class="modal-badges" id="wmBadges"></div>
+          <ol id="wmInstructions" class="modal-instructions"></ol>
+        </div>
+      </div>
+
+      <div id="wmRestOverlay" class="wm-rest-overlay hidden">
+        <div class="wm-rest-time" id="wmRestTime">60</div>
+        <div class="wm-rest-label">Rest</div>
+        <div class="wm-rest-controls">
+          <button id="wmRestMinus" class="wm-rest-btn">−15s</button>
+          <button id="wmRestSkip" class="wm-rest-btn wm-rest-skip">Skip</button>
+          <button id="wmRestPlus" class="wm-rest-btn">+15s</button>
+        </div>
+      </div>
+
+      <div class="wm-footer">
+        <button id="wmPrevBtn" class="wm-nav-btn">Previous</button>
+        <button id="wmRestBtn" class="wm-rest-trigger-btn">Rest</button>
+        <button id="wmNextBtn" class="wm-nav-btn wm-nav-primary">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="wmDoneOverlay" class="workout-mode-overlay hidden">
+    <div class="wm-done">
+      <div class="wm-done-emoji">🎉</div>
+      <h2>Workout complete!</h2>
+      <p id="wmDoneSummary"></p>
+      <button id="wmDoneCloseBtn" class="start-workout-btn">Done</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
