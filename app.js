@@ -83,16 +83,25 @@
   function saveFavorites() {
     localStorage.setItem("exlib-favorites", JSON.stringify([...state.favorites]));
   }
+  // Older saved data stored workout entries as plain id strings; normalize
+  // to {id, sets, reps} objects so old localStorage keeps working.
+  function normalizeWorkoutEntry(x) {
+    return typeof x === "string" ? { id: x, sets: 3, reps: 10 } : x;
+  }
   function loadWorkoutDraft() {
-    try { return JSON.parse(localStorage.getItem("exlib-workout-current")) || []; }
+    try { return (JSON.parse(localStorage.getItem("exlib-workout-current")) || []).map(normalizeWorkoutEntry); }
     catch { return []; }
   }
   function saveWorkoutDraft() {
     localStorage.setItem("exlib-workout-current", JSON.stringify(state.workout));
   }
   function loadSavedWorkouts() {
-    try { return JSON.parse(localStorage.getItem("exlib-workouts")) || {}; }
-    catch { return {}; }
+    try {
+      const raw = JSON.parse(localStorage.getItem("exlib-workouts")) || {};
+      const out = {};
+      Object.keys(raw).forEach(name => { out[name] = (raw[name] || []).map(normalizeWorkoutEntry); });
+      return out;
+    } catch { return {}; }
   }
   function saveSavedWorkouts() {
     localStorage.setItem("exlib-workouts", JSON.stringify(state.savedWorkouts));
@@ -116,8 +125,11 @@
   };
 
   function isFavorite(id) { return state.favorites.has(id); }
-  function isInWorkout(id) { return state.workout.includes(id); }
+  function isInWorkout(id) { return state.workout.some(w => w.id === id); }
+  function workoutEntry(id) { return state.workout.find(w => w.id === id); }
   function exerciseById(id) { return state.all.find(e => e.id === id); }
+
+  let pendingSharedWorkout = null;
 
   /* ---------------- DOM refs ---------------- */
 
@@ -165,6 +177,7 @@
 
   const workoutDrawerOverlay = $("#workoutDrawerOverlay");
   const workoutDrawerClose = $("#workoutDrawerClose");
+  const workoutShareBtn = $("#workoutShareBtn");
   const workoutEmptyState = $("#workoutEmptyState");
   const workoutList = $("#workoutList");
   const savedWorkoutsList = $("#savedWorkoutsList");
@@ -173,6 +186,11 @@
   const workoutClearBtn = $("#workoutClearBtn");
   const workoutStartBtn = $("#workoutStartBtn");
 
+  const sharedWorkoutBanner = $("#sharedWorkoutBanner");
+  const sharedBannerText = $("#sharedBannerText");
+  const sharedBannerImport = $("#sharedBannerImport");
+  const sharedBannerDismiss = $("#sharedBannerDismiss");
+
   const workoutModeOverlay = $("#workoutModeOverlay");
   const wmProgressFill = $("#wmProgressFill");
   const wmPosition = $("#wmPosition");
@@ -180,6 +198,7 @@
   const wmImg = $("#wmImg");
   const wmTitle = $("#wmTitle");
   const wmBadges = $("#wmBadges");
+  const wmSetsReps = $("#wmSetsReps");
   const wmInstructions = $("#wmInstructions");
   const wmRestOverlay = $("#wmRestOverlay");
   const wmRestTime = $("#wmRestTime");
@@ -208,6 +227,7 @@
       buildCategoryBar();
       buildFilterSelects();
       applyFilters();
+      checkForSharedWorkout();
     })
     .catch(err => {
       resultCount.textContent = "Failed to load exercises.csv — " + err.message;
@@ -519,9 +539,9 @@
   }
 
   function toggleWorkout(id) {
-    const idx = state.workout.indexOf(id);
+    const idx = state.workout.findIndex(w => w.id === id);
     if (idx >= 0) state.workout.splice(idx, 1);
-    else state.workout.push(id);
+    else state.workout.push({ id, sets: 3, reps: 10 });
     saveWorkoutDraft();
     renderWorkoutCount();
 
@@ -543,15 +563,21 @@
     workoutList.classList.toggle("hidden", state.workout.length === 0);
     workoutList.innerHTML = "";
 
-    state.workout.forEach((id, i) => {
-      const ex = exerciseById(id);
+    state.workout.forEach((entry, i) => {
+      const ex = exerciseById(entry.id);
       if (!ex) return;
       const li = document.createElement("li");
       li.className = "workout-item";
-      li.dataset.id = id;
+      li.dataset.id = entry.id;
       li.innerHTML = `
         <img class="workout-item-thumb" src="${ex.gif}" alt="" loading="lazy">
-        <span class="workout-item-name">${ex.name}</span>
+        <div class="workout-item-main">
+          <span class="workout-item-name">${ex.name}</span>
+          <div class="workout-item-sr">
+            <label>Sets <input type="number" class="sr-input" data-field="sets" min="1" max="20" value="${entry.sets}"></label>
+            <label>Reps <input type="number" class="sr-input" data-field="reps" min="1" max="100" value="${entry.reps}"></label>
+          </div>
+        </div>
         <div class="workout-item-controls">
           <button data-action="up" ${i === 0 ? "disabled" : ""} aria-label="Move up">↑</button>
           <button data-action="down" ${i === state.workout.length - 1 ? "disabled" : ""} aria-label="Move down">↓</button>
@@ -570,7 +596,7 @@
     if (!btn) return;
     const li = e.target.closest(".workout-item");
     const id = li.dataset.id;
-    const idx = state.workout.indexOf(id);
+    const idx = state.workout.findIndex(w => w.id === id);
     if (idx < 0) return;
 
     if (btn.dataset.action === "remove") {
@@ -586,6 +612,19 @@
     saveWorkoutDraft();
     renderWorkoutCount();
     renderWorkoutDrawer();
+  });
+
+  workoutList.addEventListener("change", e => {
+    const input = e.target.closest(".sr-input");
+    if (!input) return;
+    const li = e.target.closest(".workout-item");
+    const entry = workoutEntry(li.dataset.id);
+    if (!entry) return;
+    let val = parseInt(input.value, 10);
+    if (!Number.isFinite(val) || val < 1) val = 1;
+    entry[input.dataset.field] = val;
+    input.value = val;
+    saveWorkoutDraft();
   });
 
   function renderSavedWorkoutsList() {
@@ -611,9 +650,9 @@
   }
 
   function loadSavedWorkout(name) {
-    const ids = state.savedWorkouts[name];
-    if (!ids) return;
-    state.workout = [...ids];
+    const entries = state.savedWorkouts[name];
+    if (!entries) return;
+    state.workout = entries.map(e => ({ ...e }));
     saveWorkoutDraft();
     renderWorkoutCount();
     renderWorkoutDrawer();
@@ -629,7 +668,7 @@
   workoutSaveBtn.addEventListener("click", () => {
     const name = workoutNameInput.value.trim();
     if (!name || state.workout.length === 0) return;
-    state.savedWorkouts[name] = [...state.workout];
+    state.savedWorkouts[name] = state.workout.map(e => ({ ...e }));
     saveSavedWorkouts();
     workoutNameInput.value = "";
     renderSavedWorkoutsList();
@@ -659,6 +698,75 @@
   workoutDrawerClose.addEventListener("click", closeWorkoutDrawer);
   workoutDrawerOverlay.addEventListener("click", e => { if (e.target === workoutDrawerOverlay) closeWorkoutDrawer(); });
 
+  /* ---------------- Share link ---------------- */
+
+  function encodeWorkoutParam(workout) {
+    return workout.map(w => `${w.id}-${w.sets}-${w.reps}`).join(",");
+  }
+
+  function decodeWorkoutParam(str) {
+    return str.split(",").map(part => {
+      const [id, sets, reps] = part.split("-");
+      if (!id) return null;
+      const s = parseInt(sets, 10), r = parseInt(reps, 10);
+      return { id, sets: s > 0 ? s : 3, reps: r > 0 ? r : 10 };
+    }).filter(Boolean);
+  }
+
+  async function copyShareLink() {
+    if (state.workout.length === 0) return;
+    const url = `${location.origin}${location.pathname}?w=${encodeWorkoutParam(state.workout)}`;
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(url);
+      copied = true;
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try { copied = document.execCommand("copy"); } catch { copied = false; }
+      ta.remove();
+    }
+    const original = workoutShareBtn.textContent;
+    workoutShareBtn.textContent = copied ? "✅" : "⚠️";
+    workoutShareBtn.disabled = true;
+    setTimeout(() => { workoutShareBtn.textContent = original; workoutShareBtn.disabled = false; }, 1600);
+  }
+  workoutShareBtn.addEventListener("click", copyShareLink);
+
+  function checkForSharedWorkout() {
+    const params = new URLSearchParams(location.search);
+    const w = params.get("w");
+    if (!w) return;
+    const entries = decodeWorkoutParam(w).filter(e => exerciseById(e.id));
+    if (!entries.length) return;
+    pendingSharedWorkout = entries;
+    sharedBannerText.textContent = `A trainer shared a workout with ${entries.length} exercise${entries.length === 1 ? "" : "s"}.`;
+    sharedWorkoutBanner.classList.remove("hidden");
+  }
+
+  function dismissSharedBanner() {
+    sharedWorkoutBanner.classList.add("hidden");
+    pendingSharedWorkout = null;
+    const url = new URL(location.href);
+    url.searchParams.delete("w");
+    history.replaceState({}, "", url);
+  }
+
+  sharedBannerImport.addEventListener("click", () => {
+    if (!pendingSharedWorkout) return;
+    state.workout = pendingSharedWorkout.map(e => ({ ...e }));
+    saveWorkoutDraft();
+    renderWorkoutCount();
+    refreshAllWorkoutBadges();
+    dismissSharedBanner();
+    openWorkoutDrawer();
+  });
+  sharedBannerDismiss.addEventListener("click", dismissSharedBanner);
+
   /* ---------------- Workout mode ---------------- */
 
   let wmExercises = [];
@@ -667,7 +775,10 @@
   let restSeconds = 60;
 
   function startWorkoutMode() {
-    wmExercises = state.workout.map(exerciseById).filter(Boolean);
+    wmExercises = state.workout.map(entry => {
+      const ex = exerciseById(entry.id);
+      return ex ? { ...ex, sets: entry.sets, reps: entry.reps } : null;
+    }).filter(Boolean);
     if (!wmExercises.length) return;
     wmIndex = 0;
     closeWorkoutDrawer();
@@ -697,6 +808,7 @@
       <span class="tag equipment">${ex.equipment}</span>
       <span class="tag equipment">${ex.bodyPart}</span>
     `;
+    wmSetsReps.textContent = `${ex.sets} sets × ${ex.reps} reps`;
     wmInstructions.innerHTML = ex.instructions.length
       ? ex.instructions.map(step => `<li>${step}</li>`).join("")
       : `<li>No instructions listed.</li>`;

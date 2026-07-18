@@ -69,6 +69,16 @@
     <nav class="category-bar" id="categoryBar" aria-label="Body part categories"></nav>
   </header>
 
+  <div id="sharedWorkoutBanner" class="shared-banner hidden">
+    <div class="shared-banner-inner">
+      <span id="sharedBannerText"></span>
+      <div class="shared-banner-actions">
+        <button id="sharedBannerImport" class="reset-filters-btn shared-banner-import">Import workout</button>
+        <button id="sharedBannerDismiss" class="drawer-icon-btn" aria-label="Dismiss">&times;</button>
+      </div>
+    </div>
+  </div>
+
   <div id="filterPanel" class="filter-panel">
     <div class="filter-panel-inner">
       <div class="filter-group">
@@ -152,7 +162,10 @@
     <aside class="workout-drawer" role="dialog" aria-modal="true" aria-labelledby="workoutDrawerTitle">
       <div class="drawer-header">
         <h2 id="workoutDrawerTitle">Your Workout</h2>
-        <button id="workoutDrawerClose" class="modal-close" aria-label="Close">&times;</button>
+        <div class="drawer-header-actions">
+          <button id="workoutShareBtn" class="drawer-icon-btn" title="Copy shareable link" aria-label="Copy shareable link">🔗</button>
+          <button id="workoutDrawerClose" class="modal-close" aria-label="Close">&times;</button>
+        </div>
       </div>
 
       <div class="drawer-body">
@@ -199,6 +212,7 @@
         <div class="wm-info">
           <h2 id="wmTitle"></h2>
           <div class="modal-badges" id="wmBadges"></div>
+          <div class="wm-sets-reps" id="wmSetsReps"></div>
           <ol id="wmInstructions" class="modal-instructions"></ol>
         </div>
       </div>
