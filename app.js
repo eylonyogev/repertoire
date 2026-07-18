@@ -253,9 +253,11 @@
   const modalNext = $("#modalNext");
   const modalFavBtn = $("#modalFavBtn");
   const modalAddBtn = $("#modalAddBtn");
+  const modalSimilar = $("#modalSimilar");
 
   const workoutDrawerOverlay = $("#workoutDrawerOverlay");
   const workoutDrawerClose = $("#workoutDrawerClose");
+  const workoutPrintBtn = $("#workoutPrintBtn");
   const workoutShareBtn = $("#workoutShareBtn");
   const workoutEmptyState = $("#workoutEmptyState");
   const workoutList = $("#workoutList");
@@ -291,6 +293,10 @@
   const wmDoneOverlay = $("#wmDoneOverlay");
   const wmDoneSummary = $("#wmDoneSummary");
   const wmDoneCloseBtn = $("#wmDoneCloseBtn");
+
+  const printTitle = $("#printTitle");
+  const printDate = $("#printDate");
+  const printTableBody = $("#printTableBody");
 
   let modalIndex = -1;
 
@@ -664,6 +670,16 @@
     if (ex) toggleWorkout(ex.id);
   });
 
+  function swapWorkoutExercise(oldId, newId) {
+    const idx = state.workout.findIndex(w => w.id === oldId);
+    if (idx < 0) return;
+    state.workout[idx] = { id: newId, sets: state.workout[idx].sets, reps: state.workout[idx].reps };
+    saveWorkoutDraft();
+    renderWorkoutCount();
+    refreshAllWorkoutBadges();
+    if (!workoutDrawerOverlay.classList.contains("hidden")) renderWorkoutDrawer();
+  }
+
   function renderWorkoutDrawer() {
     workoutEmptyState.classList.toggle("hidden", state.workout.length > 0);
     workoutList.classList.toggle("hidden", state.workout.length === 0);
@@ -747,10 +763,12 @@
       row.innerHTML = `
         <button class="saved-workout-name">${name}</button>
         <span class="saved-workout-count">${entries.length}</span>
+        <button class="saved-workout-print" aria-label="Print workout" title="Print / export">🖨️</button>
         <button class="saved-workout-share" aria-label="Copy shareable link" title="Copy shareable link">🔗</button>
         <button class="saved-workout-delete" aria-label="Delete saved workout">&times;</button>
       `;
       row.querySelector(".saved-workout-name").addEventListener("click", () => loadSavedWorkout(name));
+      row.querySelector(".saved-workout-print").addEventListener("click", () => printWorkout(entries, name));
       row.querySelector(".saved-workout-share").addEventListener("click", e => {
         copyLinkToClipboard(buildShareUrl(entries, name), e.currentTarget);
       });
@@ -854,6 +872,33 @@
   workoutShareBtn.addEventListener("click", () => {
     if (state.workout.length === 0) return;
     copyLinkToClipboard(buildShareUrl(state.workout), workoutShareBtn);
+  });
+
+  /* ---------------- Print / export ---------------- */
+
+  function printWorkout(entries, name) {
+    if (!entries.length) return;
+    printTitle.textContent = name || "My Workout";
+    printDate.textContent = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+    printTableBody.innerHTML = entries.map(entry => {
+      const ex = exerciseById(entry.id);
+      if (!ex) return "";
+      return `
+        <tr>
+          <td>${ex.name}</td>
+          <td>${ex.target}</td>
+          <td>${ex.equipment}</td>
+          <td>${entry.sets}</td>
+          <td>${entry.reps}</td>
+          <td class="print-check">☐</td>
+        </tr>
+      `;
+    }).join("");
+    window.print();
+  }
+
+  workoutPrintBtn.addEventListener("click", () => {
+    printWorkout(state.workout, workoutNameInput.value.trim() || "My Workout");
   });
 
   function checkForSharedWorkout() {
@@ -1001,6 +1046,47 @@
     document.body.classList.add("modal-open");
   }
 
+  // Opens an exercise by id regardless of the current filtered list —
+  // falls back to clearing filters if it isn't in the current results.
+  function openModalById(id) {
+    let idx = state.filtered.findIndex(x => x.id === id);
+    if (idx === -1) {
+      resetAllFilters();
+      idx = state.filtered.findIndex(x => x.id === id);
+    }
+    if (idx >= 0) openModal(idx);
+  }
+
+  function renderSimilarExercises(ex) {
+    const alternatives = state.all
+      .filter(e => e.id !== ex.id && e.target === ex.target)
+      .sort((a, b) => {
+        const aDiff = a.equipment !== ex.equipment ? 0 : 1;
+        const bDiff = b.equipment !== ex.equipment ? 0 : 1;
+        return aDiff !== bDiff ? aDiff - bDiff : a.name.localeCompare(b.name);
+      })
+      .slice(0, 4);
+
+    modalSimilar.innerHTML = alternatives.length
+      ? alternatives.map(alt => `
+          <button class="similar-item" data-id="${alt.id}">
+            <img src="${alt.gif}" alt="" loading="lazy">
+            <span>${alt.name}</span>
+            <span class="similar-equip">${alt.equipment}</span>
+          </button>
+        `).join("")
+      : `<span class="similar-empty">No alternatives found for this muscle.</span>`;
+  }
+
+  modalSimilar.addEventListener("click", e => {
+    const btn = e.target.closest(".similar-item");
+    if (!btn) return;
+    const newId = btn.dataset.id;
+    const current = state.filtered[modalIndex];
+    if (current && isInWorkout(current.id)) swapWorkoutExercise(current.id, newId);
+    openModalById(newId);
+  });
+
   function closeModal() {
     modalOverlay.classList.remove("visible");
     document.body.style.overflow = "";
@@ -1035,6 +1121,8 @@
     modalInstructions.innerHTML = ex.instructions.length
       ? ex.instructions.map(step => `<li>${step}</li>`).join("")
       : `<li>No instructions listed.</li>`;
+
+    renderSimilarExercises(ex);
 
     modalPrev.disabled = modalIndex <= 0;
     modalNext.disabled = modalIndex >= state.filtered.length - 1;

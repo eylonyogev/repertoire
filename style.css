@@ -719,6 +719,27 @@ body.modal-open .card-media img { opacity: 0 !important; }
 }
 .modal-instructions li::marker { color: var(--accent); font-weight: 700; }
 
+.modal-similar { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.similar-item {
+  flex-shrink: 0;
+  width: 96px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  cursor: pointer;
+  overflow: hidden;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  transition: border-color .15s;
+}
+.similar-item:hover { border-color: var(--accent); }
+.similar-item img { width: 100%; height: 72px; object-fit: cover; background: var(--border); display: block; }
+.similar-item span { display: block; padding: 6px 8px; font-size: 11px; font-weight: 600; text-transform: capitalize; line-height: 1.3; color: var(--text); }
+.similar-item .similar-equip { display: block; padding: 0 8px 6px; margin-top: -6px; font-size: 10px; color: var(--text-faint); text-transform: capitalize; }
+.similar-empty { font-size: 13px; color: var(--text-faint); }
+
 .modal-close {
   position: absolute;
   top: 14px;
@@ -869,13 +890,15 @@ body.modal-open .card-media img { opacity: 0 !important; }
 .saved-workout-name { flex: 1; font-size: 13.5px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; background: none; border: none; text-align: left; padding: 0; color: var(--text); }
 .saved-workout-name:hover { color: var(--accent); }
 .saved-workout-count { font-size: 11px; color: var(--text-faint); font-weight: 600; flex-shrink: 0; }
-.saved-workout-share {
+.saved-workout-share,
+.saved-workout-print {
   width: 24px; height: 24px; border-radius: 6px; border: none;
   background: transparent; color: var(--text-faint); cursor: pointer;
   font-size: 12px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
 }
-.saved-workout-share:hover { color: var(--accent); }
+.saved-workout-share:hover,
+.saved-workout-print:hover { color: var(--accent); }
 .saved-workout-share:disabled { opacity: .6; cursor: default; }
 .saved-workout-delete { width: 24px; height: 24px; border-radius: 6px; border: none; background: transparent; color: var(--text-faint); cursor: pointer; font-size: 15px; flex-shrink: 0; }
 .saved-workout-delete:hover { color: #e5484d; }
@@ -986,6 +1009,31 @@ body.modal-open .card-media img { opacity: 0 !important; }
 .wm-done-emoji { font-size: 56px; margin-bottom: 10px; }
 .wm-done h2 { margin: 0 0 8px; }
 .wm-done p { color: var(--text-muted); margin: 0 0 24px; }
+
+/* ---------- Print sheet ---------- */
+.print-sheet { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  #printSheet, #printSheet * { visibility: visible; }
+  #printSheet {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 24px;
+    color: #000;
+    background: #fff;
+  }
+  .print-brand { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: #666; margin-bottom: 6px; }
+  #printTitle { margin: 0 0 4px; font-size: 26px; text-transform: capitalize; }
+  .print-date { color: #555; font-size: 13px; margin-bottom: 18px; }
+  #printTable { width: 100%; border-collapse: collapse; }
+  #printTable th, #printTable td { border: 1px solid #999; padding: 9px 12px; text-align: left; font-size: 14px; text-transform: capitalize; }
+  #printTable th { background: #eee; text-transform: uppercase; font-size: 11px; letter-spacing: .03em; }
+  #printTable .print-check { text-align: center; font-size: 18px; width: 50px; }
+}
 
 @media (max-width: 760px) {
   .brand-name { display: none; }

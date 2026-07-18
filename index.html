@@ -161,6 +161,8 @@
           <div class="modal-badges" id="modalSecondary"></div>
           <h3 class="modal-subheading">Instructions</h3>
           <ol id="modalInstructions" class="modal-instructions"></ol>
+          <h3 class="modal-subheading">Similar exercises</h3>
+          <div class="modal-similar" id="modalSimilar"></div>
         </div>
       </div>
     </div>
@@ -171,6 +173,7 @@
       <div class="drawer-header">
         <h2 id="workoutDrawerTitle">Your Workout</h2>
         <div class="drawer-header-actions">
+          <button id="workoutPrintBtn" class="drawer-icon-btn" title="Print / export" aria-label="Print or export workout">🖨️</button>
           <button id="workoutShareBtn" class="drawer-icon-btn" title="Copy shareable link" aria-label="Copy shareable link">🔗</button>
           <button id="workoutDrawerClose" class="modal-close" aria-label="Close">&times;</button>
         </div>
@@ -250,6 +253,18 @@
       <p id="wmDoneSummary"></p>
       <button id="wmDoneCloseBtn" class="start-workout-btn">Done</button>
     </div>
+  </div>
+
+  <div id="printSheet" class="print-sheet">
+    <div class="print-brand">Repertoire</div>
+    <h1 id="printTitle"></h1>
+    <div id="printDate" class="print-date"></div>
+    <table id="printTable">
+      <thead>
+        <tr><th>Exercise</th><th>Target</th><th>Equipment</th><th>Sets</th><th>Reps</th><th>Done</th></tr>
+      </thead>
+      <tbody id="printTableBody"></tbody>
+    </table>
   </div>
 
   <script src="app.js"></script>
