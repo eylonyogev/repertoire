@@ -635,15 +635,19 @@
       return;
     }
     names.forEach(name => {
-      const ids = state.savedWorkouts[name];
+      const entries = state.savedWorkouts[name];
       const row = document.createElement("div");
       row.className = "saved-workout-row";
       row.innerHTML = `
         <button class="saved-workout-name">${name}</button>
-        <span class="saved-workout-count">${ids.length}</span>
+        <span class="saved-workout-count">${entries.length}</span>
+        <button class="saved-workout-share" aria-label="Copy shareable link" title="Copy shareable link">🔗</button>
         <button class="saved-workout-delete" aria-label="Delete saved workout">&times;</button>
       `;
       row.querySelector(".saved-workout-name").addEventListener("click", () => loadSavedWorkout(name));
+      row.querySelector(".saved-workout-share").addEventListener("click", e => {
+        copyLinkToClipboard(buildShareUrl(entries, name), e.currentTarget);
+      });
       row.querySelector(".saved-workout-delete").addEventListener("click", () => deleteSavedWorkout(name));
       savedWorkoutsList.appendChild(row);
     });
@@ -713,9 +717,14 @@
     }).filter(Boolean);
   }
 
-  async function copyShareLink() {
-    if (state.workout.length === 0) return;
-    const url = `${location.origin}${location.pathname}?w=${encodeWorkoutParam(state.workout)}`;
+  function buildShareUrl(entries, name) {
+    const params = new URLSearchParams();
+    params.set("w", encodeWorkoutParam(entries));
+    if (name) params.set("n", name);
+    return `${location.origin}${location.pathname}?${params.toString()}`;
+  }
+
+  async function copyLinkToClipboard(url, btn) {
     let copied = false;
     try {
       await navigator.clipboard.writeText(url);
@@ -730,12 +739,16 @@
       try { copied = document.execCommand("copy"); } catch { copied = false; }
       ta.remove();
     }
-    const original = workoutShareBtn.textContent;
-    workoutShareBtn.textContent = copied ? "✅" : "⚠️";
-    workoutShareBtn.disabled = true;
-    setTimeout(() => { workoutShareBtn.textContent = original; workoutShareBtn.disabled = false; }, 1600);
+    const original = btn.textContent;
+    btn.textContent = copied ? "✅" : "⚠️";
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1600);
   }
-  workoutShareBtn.addEventListener("click", copyShareLink);
+
+  workoutShareBtn.addEventListener("click", () => {
+    if (state.workout.length === 0) return;
+    copyLinkToClipboard(buildShareUrl(state.workout), workoutShareBtn);
+  });
 
   function checkForSharedWorkout() {
     const params = new URLSearchParams(location.search);
@@ -743,8 +756,11 @@
     if (!w) return;
     const entries = decodeWorkoutParam(w).filter(e => exerciseById(e.id));
     if (!entries.length) return;
-    pendingSharedWorkout = entries;
-    sharedBannerText.textContent = `A trainer shared a workout with ${entries.length} exercise${entries.length === 1 ? "" : "s"}.`;
+    const name = params.get("n") || "";
+    pendingSharedWorkout = { entries, name };
+    sharedBannerText.textContent = name
+      ? `A trainer shared the workout "${name}" (${entries.length} exercise${entries.length === 1 ? "" : "s"}).`
+      : `A trainer shared a workout with ${entries.length} exercise${entries.length === 1 ? "" : "s"}.`;
     sharedWorkoutBanner.classList.remove("hidden");
   }
 
@@ -753,15 +769,21 @@
     pendingSharedWorkout = null;
     const url = new URL(location.href);
     url.searchParams.delete("w");
+    url.searchParams.delete("n");
     history.replaceState({}, "", url);
   }
 
   sharedBannerImport.addEventListener("click", () => {
     if (!pendingSharedWorkout) return;
-    state.workout = pendingSharedWorkout.map(e => ({ ...e }));
+    const { entries, name } = pendingSharedWorkout;
+    state.workout = entries.map(e => ({ ...e }));
     saveWorkoutDraft();
     renderWorkoutCount();
     refreshAllWorkoutBadges();
+    if (name) {
+      state.savedWorkouts[name] = entries.map(e => ({ ...e }));
+      saveSavedWorkouts();
+    }
     dismissSharedBanner();
     openWorkoutDrawer();
   });

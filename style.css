@@ -802,6 +802,14 @@ body.modal-open .card-media img { opacity: 0 !important; }
 .saved-workout-name { flex: 1; font-size: 13.5px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; background: none; border: none; text-align: left; padding: 0; color: var(--text); }
 .saved-workout-name:hover { color: var(--accent); }
 .saved-workout-count { font-size: 11px; color: var(--text-faint); font-weight: 600; flex-shrink: 0; }
+.saved-workout-share {
+  width: 24px; height: 24px; border-radius: 6px; border: none;
+  background: transparent; color: var(--text-faint); cursor: pointer;
+  font-size: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.saved-workout-share:hover { color: var(--accent); }
+.saved-workout-share:disabled { opacity: .6; cursor: default; }
 .saved-workout-delete { width: 24px; height: 24px; border-radius: 6px; border: none; background: transparent; color: var(--text-faint); cursor: pointer; font-size: 15px; flex-shrink: 0; }
 .saved-workout-delete:hover { color: #e5484d; }
 .saved-workouts-empty { color: var(--text-faint); font-size: 13px; }
