@@ -347,6 +347,73 @@ html, body {
   padding: 0;
 }
 
+/* ---------- Recommended workouts ---------- */
+.recommended-section { margin-bottom: 28px; }
+.recommended-header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 14px;
+}
+.recommended-header h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+.recommended-sub { font-size: 13px; color: var(--text-faint); }
+
+.recommended-row {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+}
+.recommended-row::-webkit-scrollbar { height: 5px; }
+.recommended-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.template-card {
+  flex-shrink: 0;
+  width: 190px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  padding: 18px 16px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.template-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+.template-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+}
+.template-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.template-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.4; }
+.template-count {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  margin-top: auto;
+}
+
 /* ---------- Grid ---------- */
 .grid {
   display: grid;

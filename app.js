@@ -11,6 +11,84 @@
     "lower arms": "🤜", cardio: "🏃", neck: "🧍",
   };
 
+  // Curated splits aimed at an average adult male, built from exercises
+  // verified to exist in exercises.csv. Sets/reps are sensible general-
+  // fitness defaults — editable by the user once loaded into a workout.
+  const RECOMMENDED_WORKOUTS = [
+    {
+      name: "Full Body", icon: "🔥",
+      description: "A balanced session hitting every major muscle group.",
+      exercises: [
+        { id: "1760", sets: 3, reps: 12 }, // dumbbell goblet squat
+        { id: "0662", sets: 3, reps: 12 }, // push-up
+        { id: "0293", sets: 3, reps: 12 }, // dumbbell bent over row
+        { id: "0426", sets: 3, reps: 10 }, // dumbbell standing overhead press
+        { id: "1459", sets: 3, reps: 10 }, // dumbbell romanian deadlift
+        { id: "0276", sets: 3, reps: 12 }, // dead bug
+      ],
+    },
+    {
+      name: "Upper Body", icon: "💪",
+      description: "Chest, back, shoulders and arms in one session.",
+      exercises: [
+        { id: "0289", sets: 3, reps: 10 }, // dumbbell bench press
+        { id: "0652", sets: 3, reps: 8 },  // pull-up
+        { id: "0426", sets: 3, reps: 10 }, // dumbbell standing overhead press
+        { id: "0293", sets: 3, reps: 10 }, // dumbbell bent over row
+        { id: "0294", sets: 3, reps: 12 }, // dumbbell biceps curl
+        { id: "0430", sets: 3, reps: 12 }, // dumbbell standing triceps extension
+      ],
+    },
+    {
+      name: "Lower Body", icon: "🦵",
+      description: "Quads, hamstrings, glutes and calves.",
+      exercises: [
+        { id: "1760", sets: 3, reps: 12 }, // dumbbell goblet squat
+        { id: "1459", sets: 3, reps: 10 }, // dumbbell romanian deadlift
+        { id: "0336", sets: 3, reps: 10 }, // dumbbell lunge
+        { id: "0431", sets: 3, reps: 10 }, // dumbbell step-up
+        { id: "0697", sets: 3, reps: 12 }, // self assisted inverse leg curl
+        { id: "1373", sets: 3, reps: 15 }, // bodyweight standing calf raise
+      ],
+    },
+    {
+      name: "Push Day", icon: "⬆️",
+      description: "Chest, shoulders and triceps — everything you press.",
+      exercises: [
+        { id: "0289", sets: 3, reps: 10 }, // dumbbell bench press
+        { id: "0314", sets: 3, reps: 10 }, // dumbbell incline bench press
+        { id: "0426", sets: 3, reps: 10 }, // dumbbell standing overhead press
+        { id: "0334", sets: 3, reps: 12 }, // dumbbell lateral raise
+        { id: "0430", sets: 3, reps: 12 }, // dumbbell standing triceps extension
+        { id: "0662", sets: 3, reps: 15 }, // push-up
+      ],
+    },
+    {
+      name: "Pull Day", icon: "⬇️",
+      description: "Back, biceps and rear delts — everything you pull.",
+      exercises: [
+        { id: "0652", sets: 3, reps: 8 },  // pull-up
+        { id: "0293", sets: 3, reps: 10 }, // dumbbell bent over row
+        { id: "0861", sets: 3, reps: 12 }, // cable seated row
+        { id: "2292", sets: 3, reps: 12 }, // dumbbell rear delt raise
+        { id: "0294", sets: 3, reps: 12 }, // dumbbell biceps curl
+        { id: "0406", sets: 3, reps: 12 }, // dumbbell shrug
+      ],
+    },
+    {
+      name: "Core & Abs", icon: "⚡",
+      description: "A focused session to build a stronger midsection.",
+      exercises: [
+        { id: "0001", sets: 3, reps: 15 }, // 3/4 sit-up
+        { id: "0003", sets: 3, reps: 15 }, // air bike
+        { id: "0687", sets: 3, reps: 16 }, // russian twist
+        { id: "0276", sets: 3, reps: 12 }, // dead bug
+        { id: "0464", sets: 3, reps: 10 }, // front plank with twist
+        { id: "0472", sets: 3, reps: 10 }, // hanging leg raise
+      ],
+    },
+  ];
+
   /* ---------------- CSV parsing ---------------- */
 
   function parseCSV(text) {
@@ -134,6 +212,7 @@
   /* ---------------- DOM refs ---------------- */
 
   const $ = sel => document.querySelector(sel);
+  const recommendedRow = $("#recommendedRow");
   const grid = $("#grid");
   const resultCount = $("#resultCount");
   const activeChips = $("#activeChips");
@@ -228,6 +307,7 @@
       buildFilterSelects();
       applyFilters();
       checkForSharedWorkout();
+      renderRecommendedWorkouts();
     })
     .catch(err => {
       resultCount.textContent = "Failed to load exercises.csv — " + err.message;
@@ -271,6 +351,32 @@
     const targets = [...new Set(state.all.map(e => e.target))].filter(Boolean).sort();
     equipment.forEach(v => equipmentSelect.appendChild(new Option(v, v)));
     targets.forEach(v => targetSelect.appendChild(new Option(v, v)));
+  }
+
+  function renderRecommendedWorkouts() {
+    recommendedRow.innerHTML = "";
+    RECOMMENDED_WORKOUTS.forEach(template => {
+      const valid = template.exercises.filter(e => exerciseById(e.id));
+      if (!valid.length) return;
+      const card = document.createElement("button");
+      card.className = "template-card";
+      card.innerHTML = `
+        <span class="template-icon">${template.icon}</span>
+        <span class="template-title">${template.name}</span>
+        <span class="template-desc">${template.description}</span>
+        <span class="template-count">${valid.length} exercises</span>
+      `;
+      card.addEventListener("click", () => loadTemplateWorkout(template));
+      recommendedRow.appendChild(card);
+    });
+  }
+
+  function loadTemplateWorkout(template) {
+    state.workout = template.exercises.filter(e => exerciseById(e.id)).map(e => ({ ...e }));
+    saveWorkoutDraft();
+    renderWorkoutCount();
+    refreshAllWorkoutBadges();
+    openWorkoutDrawer();
   }
 
   /* ---------------- Filtering ---------------- */
