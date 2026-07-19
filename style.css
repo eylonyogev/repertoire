@@ -884,6 +884,30 @@ body.modal-open .card-media img { opacity: 0 !important; }
 }
 .workout-item-controls button:hover { border-color: var(--accent); color: var(--accent); }
 .workout-item-controls button:disabled { opacity: .3; cursor: default; }
+
+.workout-item.grouped { border-left: 3px solid var(--accent); }
+.workout-group-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin: 2px 0 -2px 4px;
+}
+.link-connector { list-style: none; display: flex; justify-content: center; margin: -3px 0; }
+.link-toggle {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px dashed var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: all .15s;
+}
+.link-toggle:hover { border-color: var(--accent); color: var(--accent); }
+.link-toggle.active { border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); }
 .workout-item-remove:hover { border-color: #e5484d !important; color: #e5484d !important; }
 
 .drawer-section { margin-top: 22px; }
@@ -957,7 +981,20 @@ body.modal-open .card-media img { opacity: 0 !important; }
 .wm-progress-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 14px; flex-shrink: 0; }
 .wm-progress-fill { height: 100%; background: var(--accent); transition: width .25s; width: 0%; }
 .wm-header-row { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.wm-header-left { display: flex; align-items: center; gap: 10px; }
 .wm-position { font-size: 13px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; letter-spacing: .04em; }
+.wm-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.wm-header-actions { display: flex; align-items: center; gap: 8px; }
+.wm-header-actions .modal-close { position: static; }
 
 .wm-body { flex: 1; display: flex; gap: 32px; min-height: 0; padding: 24px 0; }
 .wm-media { flex: 1; display: flex; align-items: center; justify-content: center; background: var(--bg-elevated); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); min-width: 0; }
@@ -1051,7 +1088,7 @@ body.modal-open .card-media img { opacity: 0 !important; }
   .modal-next { right: 10px; }
   .modal-info { padding-bottom: 70px; }
 
-  .workout-drawer { width: 100%; max-width: 100vw; }
+  .workout-drawer { width: 100%; max-width: 100%; }
   .wm-body { flex-direction: column; overflow-y: auto; padding: 16px 0; gap: 16px; }
   .wm-media { max-height: 38vh; flex: none; }
   .wm-info h2 { font-size: 22px; }

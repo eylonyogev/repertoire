@@ -162,9 +162,24 @@
     localStorage.setItem("exlib-favorites", JSON.stringify([...state.favorites]));
   }
   // Older saved data stored workout entries as plain id strings; normalize
-  // to {id, sets, reps} objects so old localStorage keeps working.
+  // to {id, sets, reps, linkNext} objects so old localStorage keeps working.
   function normalizeWorkoutEntry(x) {
-    return typeof x === "string" ? { id: x, sets: 3, reps: 10 } : x;
+    if (typeof x === "string") return { id: x, sets: 3, reps: 10, linkNext: false };
+    return { linkNext: false, ...x };
+  }
+
+  // A "group" is a run of consecutive entries chained via linkNext — used
+  // for superset (2 exercises) / circuit (3+) mode.
+  function computeGroups(list) {
+    const groups = [];
+    let i = 0;
+    while (i < list.length) {
+      let j = i;
+      while (j < list.length - 1 && list[j].linkNext) j++;
+      if (j > i) groups.push({ start: i, end: j });
+      i = j + 1;
+    }
+    return groups;
   }
   function loadWorkoutDraft() {
     try { return (JSON.parse(localStorage.getItem("exlib-workout-current")) || []).map(normalizeWorkoutEntry); }
@@ -275,6 +290,8 @@
   const workoutModeOverlay = $("#workoutModeOverlay");
   const wmProgressFill = $("#wmProgressFill");
   const wmPosition = $("#wmPosition");
+  const wmGroupLabel = $("#wmGroupLabel");
+  const wmVoiceBtn = $("#wmVoiceBtn");
   const wmExitBtn = $("#wmExitBtn");
   const wmImg = $("#wmImg");
   const wmTitle = $("#wmTitle");
@@ -673,7 +690,12 @@
   function swapWorkoutExercise(oldId, newId) {
     const idx = state.workout.findIndex(w => w.id === oldId);
     if (idx < 0) return;
-    state.workout[idx] = { id: newId, sets: state.workout[idx].sets, reps: state.workout[idx].reps };
+    state.workout[idx] = {
+      id: newId,
+      sets: state.workout[idx].sets,
+      reps: state.workout[idx].reps,
+      linkNext: state.workout[idx].linkNext,
+    };
     saveWorkoutDraft();
     renderWorkoutCount();
     refreshAllWorkoutBadges();
@@ -685,11 +707,24 @@
     workoutList.classList.toggle("hidden", state.workout.length === 0);
     workoutList.innerHTML = "";
 
+    const groups = computeGroups(state.workout);
+
     state.workout.forEach((entry, i) => {
       const ex = exerciseById(entry.id);
       if (!ex) return;
+
+      const startingGroup = groups.find(g => g.start === i);
+      if (startingGroup) {
+        const size = startingGroup.end - startingGroup.start + 1;
+        const label = document.createElement("li");
+        label.className = "workout-group-label";
+        label.textContent = size === 2 ? "Superset" : "Circuit";
+        workoutList.appendChild(label);
+      }
+
       const li = document.createElement("li");
       li.className = "workout-item";
+      if (groups.some(g => i >= g.start && i <= g.end)) li.classList.add("grouped");
       li.dataset.id = entry.id;
       li.innerHTML = `
         <img class="workout-item-thumb" src="${ex.gif}" alt="" loading="lazy">
@@ -707,6 +742,17 @@
         </div>
       `;
       workoutList.appendChild(li);
+
+      if (i < state.workout.length - 1) {
+        const connector = document.createElement("li");
+        connector.className = "link-connector";
+        connector.innerHTML = `
+          <button class="link-toggle${entry.linkNext ? " active" : ""}" data-index="${i}">
+            ${entry.linkNext ? "🔗 Linked" : "+ Link as superset"}
+          </button>
+        `;
+        workoutList.appendChild(connector);
+      }
     });
 
     workoutStartBtn.disabled = state.workout.length === 0;
@@ -714,9 +760,21 @@
   }
 
   workoutList.addEventListener("click", e => {
+    const linkBtn = e.target.closest(".link-toggle");
+    if (linkBtn) {
+      const idx = parseInt(linkBtn.dataset.index, 10);
+      if (Number.isFinite(idx) && state.workout[idx]) {
+        state.workout[idx].linkNext = !state.workout[idx].linkNext;
+        saveWorkoutDraft();
+        renderWorkoutDrawer();
+      }
+      return;
+    }
+
     const btn = e.target.closest("button");
     if (!btn) return;
     const li = e.target.closest(".workout-item");
+    if (!li) return;
     const id = li.dataset.id;
     const idx = state.workout.findIndex(w => w.id === id);
     if (idx < 0) return;
@@ -829,15 +887,15 @@
   /* ---------------- Share link ---------------- */
 
   function encodeWorkoutParam(workout) {
-    return workout.map(w => `${w.id}-${w.sets}-${w.reps}`).join(",");
+    return workout.map(w => `${w.id}-${w.sets}-${w.reps}-${w.linkNext ? 1 : 0}`).join(",");
   }
 
   function decodeWorkoutParam(str) {
     return str.split(",").map(part => {
-      const [id, sets, reps] = part.split("-");
+      const [id, sets, reps, link] = part.split("-");
       if (!id) return null;
       const s = parseInt(sets, 10), r = parseInt(reps, 10);
-      return { id, sets: s > 0 ? s : 3, reps: r > 0 ? r : 10 };
+      return { id, sets: s > 0 ? s : 3, reps: r > 0 ? r : 10, linkNext: link === "1" };
     }).filter(Boolean);
   }
 
@@ -880,9 +938,12 @@
     if (!entries.length) return;
     printTitle.textContent = name || "My Workout";
     printDate.textContent = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
-    printTableBody.innerHTML = entries.map(entry => {
+    const groups = computeGroups(entries);
+    printTableBody.innerHTML = entries.map((entry, i) => {
       const ex = exerciseById(entry.id);
       if (!ex) return "";
+      const group = groups.find(g => i >= g.start && i <= g.end);
+      const groupLabel = group ? (group.end - group.start + 1 === 2 ? "Superset" : "Circuit") : "";
       return `
         <tr>
           <td>${ex.name}</td>
@@ -890,6 +951,7 @@
           <td>${ex.equipment}</td>
           <td>${entry.sets}</td>
           <td>${entry.reps}</td>
+          <td>${groupLabel}</td>
           <td class="print-check">☐</td>
         </tr>
       `;
@@ -947,10 +1009,34 @@
   let restInterval = null;
   let restSeconds = 60;
 
+  /* ---------------- Voice guidance ---------------- */
+
+  let voiceEnabled = localStorage.getItem("exlib-voice-enabled") === "1";
+
+  function updateVoiceBtn() {
+    wmVoiceBtn.textContent = voiceEnabled ? "🔊" : "🔇";
+    wmVoiceBtn.setAttribute("aria-pressed", String(voiceEnabled));
+  }
+  updateVoiceBtn();
+
+  function speak(text) {
+    if (!voiceEnabled || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+  }
+
+  wmVoiceBtn.addEventListener("click", () => {
+    voiceEnabled = !voiceEnabled;
+    localStorage.setItem("exlib-voice-enabled", voiceEnabled ? "1" : "0");
+    updateVoiceBtn();
+    if (voiceEnabled) speak("Voice guidance on.");
+    else if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  });
+
   function startWorkoutMode() {
     wmExercises = state.workout.map(entry => {
       const ex = exerciseById(entry.id);
-      return ex ? { ...ex, sets: entry.sets, reps: entry.reps } : null;
+      return ex ? { ...ex, sets: entry.sets, reps: entry.reps, linkNext: entry.linkNext } : null;
     }).filter(Boolean);
     if (!wmExercises.length) return;
     wmIndex = 0;
@@ -987,6 +1073,21 @@
       : `<li>No instructions listed.</li>`;
     wmPrevBtn.disabled = wmIndex === 0;
     wmNextBtn.textContent = wmIndex === wmExercises.length - 1 ? "Finish" : "Next";
+
+    const groups = computeGroups(wmExercises);
+    const group = groups.find(g => wmIndex >= g.start && wmIndex <= g.end);
+    let announcement = `${ex.name}. ${ex.sets} sets of ${ex.reps} reps.`;
+    if (group) {
+      const size = group.end - group.start + 1;
+      const label = size === 2 ? "Superset" : "Circuit";
+      const posInGroup = wmIndex - group.start + 1;
+      wmGroupLabel.textContent = `${label} · ${posInGroup} of ${size}`;
+      wmGroupLabel.classList.remove("hidden");
+      announcement = `${label}, exercise ${posInGroup} of ${size}. ${announcement}`;
+    } else {
+      wmGroupLabel.classList.add("hidden");
+    }
+    speak(announcement);
   }
 
   wmPrevBtn.addEventListener("click", () => {
@@ -1003,6 +1104,7 @@
   function finishWorkout() {
     exitWorkoutMode();
     wmDoneSummary.textContent = `You completed ${wmExercises.length} exercise${wmExercises.length === 1 ? "" : "s"}. Nice work.`;
+    speak("Workout complete! Great work.");
     wmDoneOverlay.classList.remove("hidden");
     setTimeout(() => wmDoneOverlay.classList.add("visible"), 10);
   }
@@ -1016,10 +1118,12 @@
     restSeconds = 60;
     updateRestDisplay();
     wmRestOverlay.classList.remove("hidden");
+    speak(`Rest for ${restSeconds} seconds.`);
     clearInterval(restInterval);
     restInterval = setInterval(() => {
       restSeconds--;
-      if (restSeconds <= 0) { stopRestTimer(); return; }
+      if (restSeconds === 10) speak("10 seconds left.");
+      if (restSeconds <= 0) { speak("Time's up. Let's go."); stopRestTimer(); return; }
       updateRestDisplay();
     }, 1000);
   }

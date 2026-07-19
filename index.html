@@ -211,8 +211,14 @@
       <div class="wm-header">
         <div class="wm-progress-track"><div id="wmProgressFill" class="wm-progress-fill"></div></div>
         <div class="wm-header-row">
-          <span id="wmPosition" class="wm-position"></span>
-          <button id="wmExitBtn" class="modal-close" aria-label="Exit workout">&times;</button>
+          <div class="wm-header-left">
+            <span id="wmPosition" class="wm-position"></span>
+            <span id="wmGroupLabel" class="wm-group-label hidden"></span>
+          </div>
+          <div class="wm-header-actions">
+            <button id="wmVoiceBtn" class="drawer-icon-btn" title="Toggle voice guidance" aria-label="Toggle voice guidance" aria-pressed="false">🔇</button>
+            <button id="wmExitBtn" class="modal-close" aria-label="Exit workout">&times;</button>
+          </div>
         </div>
       </div>
 
@@ -261,7 +267,7 @@
     <div id="printDate" class="print-date"></div>
     <table id="printTable">
       <thead>
-        <tr><th>Exercise</th><th>Target</th><th>Equipment</th><th>Sets</th><th>Reps</th><th>Done</th></tr>
+        <tr><th>Exercise</th><th>Target</th><th>Equipment</th><th>Sets</th><th>Reps</th><th>Group</th><th>Done</th></tr>
       </thead>
       <tbody id="printTableBody"></tbody>
     </table>
